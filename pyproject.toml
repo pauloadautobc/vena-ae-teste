@@ -1,0 +1,11 @@
+[project]
+name = "vena-ae-pipeline"
+version = "1.0.0"
+description = "Teste técnico Analytics Engineer Sênior — Vena BPO Suprimentos"
+requires-python = ">=3.11,<3.13"
+
+[tool.dagster]
+module_name = "vena_pipeline.definitions"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

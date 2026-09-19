@@ -1,0 +1,6 @@
+# Aponte DAGSTER_HOME para uma pasta que contenha este arquivo (ver README).
+# Faz o Dagster exibir, no log de cada run, os logs JSON do pacote vena_pipeline.
+python_logs:
+  python_log_level: INFO
+  managed_python_loggers:
+    - vena_pipeline
