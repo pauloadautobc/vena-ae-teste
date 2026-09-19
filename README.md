@@ -286,20 +286,25 @@ execuções reais, não só `pytest`.
 
 ## 9. Uso de IA generativa no desenvolvimento
 
-**Ferramentas e onde foram usadas.** Claude (Cowork na 1ª versão e Claude Code, no terminal, nesta) foi usado em **todas** as
-etapas: explorar as fontes reais (chamadas à API, 30 amostras do scraping, perfil do SQLite),
-escrever o código, os SQL, os testes e este README, e executar o pipeline contra o BigQuery/GCS
-reais.
+**Ferramentas e onde foram usadas.** Claude (Cowork na 1ª versão e Claude Code, no terminal, nesta)
+fez o trabalho de implementação em **todas** as etapas: explorar as fontes reais (chamadas à API, 30
+amostras do scraping, perfil do SQLite), escrever o código, os SQL, os testes e este README, e
+executar o pipeline contra o BigQuery/GCS reais. Eu dirigi o trabalho, aprovei as decisões e conferi
+os resultados.
 
 **Metodologia — spec-first, depois iterativo e sempre validado contra a fonte real:**
 1. **Spec:** o enunciado e o `README_CANDIDATO.md` viraram a lista de requisitos (tabela da seção 5).
-2. **Investigação antes de modelar:** perfil das 3 fontes completas (seção 3). Os achados (limite de
-   30/60 s, 3 variantes de HTML, `"… BRL"`, namespaces de `pedido_id` diferentes, nomes de produto
+2. **Investigação antes de modelar:** a IA perfilou as 3 fontes completas (seção 3). Os achados (limite
+   de 30/60 s, 3 variantes de HTML, `"… BRL"`, namespaces de `pedido_id` diferentes, nomes de produto
    placeholder) definiram as decisões da seção 4, em vez de suposições.
-3. **Implementação e testes:** testes escritos junto do código, com **fixtures de HTML real** capturado
-   do serviço (não inventado pela IA); a única fixture sintética está identificada como tal.
-4. **Revisão por execução, não só por leitura:** rodei o pipeline real duas vezes, conferi os asset
-   checks, recalculei a receita do mart por fora e comparei fingerprints de todas as tabelas.
+3. **Implementação e testes (não é TDD):** os testes foram escritos **depois** de cada módulo, não
+   antes, mas antes de o pipeline ser considerado pronto. Usam **fixtures de HTML real** capturado do
+   serviço (não inventado pela IA); a única fixture sintética está identificada como tal.
+4. **Revisão por execução, não só por leitura:** a IA executou o pipeline real duas vezes sob minha
+   direção, recalculou a receita do mart por fora (Python e SQLite de origem) e comparou fingerprints
+   de todas as tabelas; eu conferi os resultados (asset checks, contagens, receita). Li as partes
+   centrais do código — ingestão (API, scraping, SQLite), SQL de staging/mart e checks; o restante
+   (testes, montagem do Dagster, scripts) foi validado por execução, não por leitura minha.
 
 **Quando a IA errou (caso real).** Este pipeline é a **segunda** versão. A primeira foi gerada por IA
 num ambiente sem acesso à rede: nunca rodou de verdade e mesmo assim documentava "30 testes
@@ -309,15 +314,23 @@ impossível de instalar; só 2 das 3 variantes do scraping tratadas; valores `"4
 NULL (0,49% da receita); upload de `itens_pedido` que carregaria ~100 mil das 5 milhões de linhas;
 SQL renderizado com `str.format` quebrando em chaves de um comentário; timestamp em nanossegundos
 carregado como INT64; loop infinito se a 1ª página da API falhasse; chave de idempotência que
-duplicava linhas a cada re-execução. Decidi descartar e refazer do zero, incorporando cada lição
-(cada uma virou teste ou requisito de design) e passando a **validar tudo contra a fonte real antes de
-afirmar**. A lição prática: "testes passando" e "li o código" não substituem rodar de verdade.
+duplicava linhas a cada re-execução. Decidi descartar tudo e refazer do zero, incorporando cada
+lição (cada uma virou teste ou requisito de design) e passando a **validar contra a fonte real antes
+de afirmar**. A lição prática: "testes passando" e "o código parece certo" não substituem rodar de verdade.
 
-**O que NÃO foi delegado à IA.**
-- Segredos: nenhum valor sensível está no código; token e chave da service account vêm do ambiente/`.env`
-  ignorado pelo git.
-- <!-- PAULO: complete/ajuste com o que VOCÊ decidiu ou revisou pessoalmente (ex.: decisões de
-  arquitetura que aprovou, trechos que reescreveu, limiares que escolheu). Só afirme o que for verdade. -->
+**O que NÃO foi delegado à IA (e por quê).**
+- **Decisões de modelagem:** UNION (e não JOIN) entre `pedidos_api` e `itens_pedido`, e quarentena dos
+  12 clientes com CPF divergente em vez de escolher uma linha. A IA levantou os fatos nos dados; a
+  decisão foi revisada e aprovada por mim, porque ambas são escolhas de risco de negócio (um JOIN
+  errado ou um histórico de cliente misturado dá resultado plausível e silenciosamente errado), não
+  detalhes técnicos.
+- **Descartar e refazer do zero:** a decisão de não remendar a 1ª versão foi minha; preferi partir de
+  uma base validada contra os serviços reais a corrigir um código cuja corretude nunca tinha sido
+  observada.
+- **Revisão do código central:** a leitura da ingestão, dos SQL e dos checks foi minha, porque são
+  os pontos que sustentam os critérios de maior peso (resiliência, modelagem, qualidade).
+- **Segredos:** nenhum valor sensível está no código; token e chave da service account vêm do
+  ambiente/`.env`, ignorado pelo git.
 
 ## 10. Limitações e próximos passos
 
